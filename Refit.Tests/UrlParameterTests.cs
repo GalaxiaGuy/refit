@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -14,6 +15,9 @@ namespace Refit.Tests
         [Get("")]
         Task Get([Url] string url);
 
+        [Get("")]
+        Task Get([Url] Uri url);
+
         [Post("")]
         Task Post([Url] string url, [Body] string body);
     }
@@ -21,7 +25,7 @@ namespace Refit.Tests
     public class UrlParameterTests
     {
         [Fact]
-        public async Task CanMakeGetRequestWithUrlParameter()
+        public async Task CanMakeGetRequestWithUrlStringParameter()
         {
             var mockHttp = new MockHttpMessageHandler();
             var settings = new RefitSettings
@@ -40,7 +44,64 @@ namespace Refit.Tests
         }
 
         [Fact]
-        public async Task CanMakePostRequestWithUrlParameter()
+        public async Task CanMakeGetRequestWithUriParameter()
+        {
+            var mockHttp = new MockHttpMessageHandler();
+            var settings = new RefitSettings
+            {
+                HttpMessageHandlerFactory = () => mockHttp
+            };
+
+            mockHttp.Expect(HttpMethod.Get, "http://foo")
+                .Respond("application/json", "Ok");
+
+            var fixture = RestService.For<IUrlParameterApi>("http://bar", settings);
+
+            await fixture.Get(new Uri("http://foo"));
+
+            mockHttp.VerifyNoOutstandingExpectation();
+        }
+
+        [Fact]
+        public async Task CanMakeGetRequestWithAbsolutePathUrlStringParameter()
+        {
+            var mockHttp = new MockHttpMessageHandler();
+            var settings = new RefitSettings
+            {
+                HttpMessageHandlerFactory = () => mockHttp
+            };
+
+            mockHttp.Expect(HttpMethod.Get, "http://foo/bar")
+                .Respond("application/json", "Ok");
+
+            var fixture = RestService.For<IUrlParameterApi>("http://foo", settings);
+
+            await fixture.Get("/bar");
+
+            mockHttp.VerifyNoOutstandingExpectation();
+        }
+
+        [Fact]
+        public async Task CanMakeGetRequestWithAbsolutePathUriParameter()
+        {
+            var mockHttp = new MockHttpMessageHandler();
+            var settings = new RefitSettings
+            {
+                HttpMessageHandlerFactory = () => mockHttp
+            };
+
+            mockHttp.Expect(HttpMethod.Get, "http://foo/bar")
+                .Respond("application/json", "Ok");
+
+            var fixture = RestService.For<IUrlParameterApi>("http://foo", settings);
+
+            await fixture.Get(new Uri("/bar", UriKind.Relative));
+
+            mockHttp.VerifyNoOutstandingExpectation();
+        }
+
+        [Fact]
+        public async Task CanMakePostRequestWithUrlStringParameter()
         {
             var mockHttp = new MockHttpMessageHandler();
             var settings = new RefitSettings
@@ -55,24 +116,6 @@ namespace Refit.Tests
             var fixture = RestService.For<IUrlParameterApi>("http://bar", settings);
 
             await fixture.Post("http://httpbin.org/foo", "raw string");
-
-            mockHttp.VerifyNoOutstandingExpectation();
-        }
-        [Fact]
-        public async Task CanMakeGetRequestWithAbsolutePathUrlParameter()
-        {
-            var mockHttp = new MockHttpMessageHandler();
-            var settings = new RefitSettings
-            {
-                HttpMessageHandlerFactory = () => mockHttp
-            };
-
-            mockHttp.Expect(HttpMethod.Get, "http://foo/bar")
-                .Respond("application/json", "Ok");
-
-            var fixture = RestService.For<IUrlParameterApi>("http://foo", settings);
-
-            await fixture.Get("/bar");
 
             mockHttp.VerifyNoOutstandingExpectation();
         }
