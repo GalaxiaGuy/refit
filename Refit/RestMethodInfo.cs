@@ -27,6 +27,7 @@ namespace Refit
         public ISet<int> HeaderCollectionParameterMap { get; set; }
         public Dictionary<int, string> PropertyParameterMap { get; set; }
         public Tuple<BodySerializationMethod, bool, int>? BodyParameterInfo { get; set; }
+        public int UrlParameterIndex { get; set; }
         public Tuple<string, int>? AuthorizeParameterInfo { get; set; }
         public Dictionary<int, string> QueryParameterMap { get; set; }
         public Dictionary<int, Tuple<string, string>> AttachmentNameMap { get; set; }
@@ -76,6 +77,8 @@ namespace Refit
             ParameterMap = BuildParameterMap(RelativePath, parameterList);
             BodyParameterInfo = FindBodyParameter(parameterList, IsMultipart, hma.Method);
             AuthorizeParameterInfo = FindAuthorizationParameter(parameterList);
+
+            UrlParameterIndex = FindUrlParameterIndex(parameterList);
 
             Headers = ParseHeaders(methodInfo);
             HeaderParameterMap = BuildHeaderParameterMap(parameterList);
@@ -316,6 +319,20 @@ namespace Refit
 
             // also check for AliasAs
             return nameAttr?.Name ?? paramInfo.GetCustomAttributes<AliasAsAttribute>(true).FirstOrDefault()?.Name!;
+        }
+
+        int FindUrlParameterIndex(IList<ParameterInfo> parameterList)
+        {
+            var parameterInfo = parameterList
+                .Select(x => new { Parameter = x, UrlAttribute = x.GetCustomAttributes(true).OfType<UrlAttribute>().FirstOrDefault() })
+                .Where(x => x.UrlAttribute != null)
+                .FirstOrDefault();
+
+            if (parameterInfo == null)
+            {
+                return -1;
+            }
+            return parameterList.IndexOf(parameterInfo.Parameter);
         }
 
         Tuple<BodySerializationMethod, bool, int>? FindBodyParameter(IList<ParameterInfo> parameterList, bool isMultipart, HttpMethod method)
