@@ -490,6 +490,20 @@ namespace Refit
                 {
                     var isParameterMappedToRequest = false;
                     var param = paramList[i];
+
+                    if (restMethod.UrlParameterIndex == i)
+                    {
+                        if (param is string stringParam)
+                        {
+                            urlTarget = stringParam;
+                        }
+                        else if (param is Uri uriParam)
+                        {
+                            urlTarget = uriParam.AbsoluteUri;
+                        }
+                        continue;
+                    }
+
                     // if part of REST resource URL, substitute it in
                     if (restMethod.ParameterMap.ContainsKey(i))
                     {
@@ -732,32 +746,40 @@ namespace Refit
 
                 ;
 
-                // NB: The URI methods in .NET are dumb. Also, we do this
-                // UriBuilder business so that we preserve any hardcoded query
-                // parameters as well as add the parameterized ones.
-                var uri = new UriBuilder(new Uri(new Uri("http://api"), urlTarget));
-                var query = HttpUtility.ParseQueryString(uri.Query ?? "");
-                foreach (var key in query.AllKeys)
+                if (restMethod.UrlParameterIndex != -1)
                 {
-                    if (!string.IsNullOrWhiteSpace(key))
-                    {
-                        queryParamsToAdd.Insert(0, new KeyValuePair<string, string?>(key, query[key]));
-                    }
-                }
-
-                if (queryParamsToAdd.Any())
-                {
-                    var pairs = queryParamsToAdd.Where(x => x.Key != null && x.Value != null)
-                                                .Select(x => Uri.EscapeDataString(x.Key) + "=" + Uri.EscapeDataString(x.Value ?? string.Empty));
-                    uri.Query = string.Join("&", pairs);
+                    ret.RequestUri = new Uri(urlTarget, UriKind.RelativeOrAbsolute);
                 }
                 else
                 {
-                    uri.Query = null;
-                }
 
-                var uriFormat = restMethod.MethodInfo.GetCustomAttribute<QueryUriFormatAttribute>()?.UriFormat ?? UriFormat.UriEscaped;
-                ret.RequestUri = new Uri(uri.Uri.GetComponents(UriComponents.PathAndQuery, uriFormat), UriKind.Relative);
+                    // NB: The URI methods in .NET are dumb. Also, we do this
+                    // UriBuilder business so that we preserve any hardcoded query
+                    // parameters as well as add the parameterized ones.
+                    var uri = new UriBuilder(new Uri(new Uri("http://api"), urlTarget));
+                    var query = HttpUtility.ParseQueryString(uri.Query ?? "");
+                    foreach (var key in query.AllKeys)
+                    {
+                        if (!string.IsNullOrWhiteSpace(key))
+                        {
+                            queryParamsToAdd.Insert(0, new KeyValuePair<string, string?>(key, query[key]));
+                        }
+                    }
+
+                    if (queryParamsToAdd.Any())
+                    {
+                        var pairs = queryParamsToAdd.Where(x => x.Key != null && x.Value != null)
+                                                    .Select(x => Uri.EscapeDataString(x.Key) + "=" + Uri.EscapeDataString(x.Value ?? string.Empty));
+                        uri.Query = string.Join("&", pairs);
+                    }
+                    else
+                    {
+                        uri.Query = null;
+                    }
+
+                    var uriFormat = restMethod.MethodInfo.GetCustomAttribute<QueryUriFormatAttribute>()?.UriFormat ?? UriFormat.UriEscaped;
+                    ret.RequestUri = new Uri(uri.Uri.GetComponents(UriComponents.PathAndQuery, uriFormat), UriKind.Relative);
+                }
                 return ret;
             };
         }

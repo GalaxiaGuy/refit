@@ -108,6 +108,11 @@ namespace Refit
 
     }
 
+    [AttributeUsage(AttributeTargets.Parameter)]
+    public class UrlAttribute : Attribute
+    {
+    }
+
     public enum BodySerializationMethod
     {
         /// <summary>
